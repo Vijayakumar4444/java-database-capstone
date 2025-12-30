@@ -1,105 +1,64 @@
-package com.project.back_end.models;
+package com.project.back_end.controllers;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.persistence.ElementCollection;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import com.project.back_end.models.Doctor;
+import com.project.back_end.repositories.DoctorRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
-@Entity
-public class Doctor {
+@RestController
+@RequestMapping("/doctors")
+public class DoctorController {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Autowired
+    private DoctorRepository doctorRepository;
 
-    @NotNull
-    @Size(min = 3, max = 100)
-    private String name;
-
-    @NotNull
-    @Size(min = 3, max = 50)
-    private String specialty;
-
-    @NotNull
-    @Email
-    private String email;
-
-    @NotNull
-    @Size(min = 6)
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private String password;
-
-    @NotNull
-    @Pattern(regexp = "\\d{10}", message = "Phone number must be 10 digits")
-    private String phone;
-
-    @ElementCollection
-    private List<String> availableTimes;
-
-    public Doctor() {
+    @GetMapping
+    public List<Doctor> getAllDoctors() {
+        return doctorRepository.findAll();
     }
 
-    public Long getId() {
-        return id;
+    @GetMapping("/{id}")
+    public ResponseEntity<Doctor> getDoctorById(@PathVariable Long id) {
+        Optional<Doctor> doctor = doctorRepository.findById(id);
+        return doctor.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    @GetMapping("/specialty/{specialty}")
+    public List<Doctor> getDoctorsBySpecialty(@PathVariable String specialty) {
+        return doctorRepository.findBySpecialtyIgnoreCase(specialty);
     }
 
-    public String getName() {
-        return name;
+    @PostMapping
+    public Doctor createDoctor(@RequestBody Doctor doctor) {
+        return doctorRepository.save(doctor);
     }
 
-    public void setName(String name) {
-        this.name = name;
+    @PutMapping("/{id}")
+    public ResponseEntity<Doctor> updateDoctor(@PathVariable Long id, @RequestBody Doctor doctorDetails) {
+        Optional<Doctor> optionalDoctor = doctorRepository.findById(id);
+        if (!optionalDoctor.isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+        Doctor doctor = optionalDoctor.get();
+        doctor.setName(doctorDetails.getName());
+        doctor.setEmail(doctorDetails.getEmail());
+        doctor.setPhone(doctorDetails.getPhone());
+        doctor.setSpecialty(doctorDetails.getSpecialty());
+        doctor.setAvailableTimes(doctorDetails.getAvailableTimes());
+        doctorRepository.save(doctor);
+        return ResponseEntity.ok(doctor);
     }
 
-    public String getSpecialty() {
-        return specialty;
-    }
-
-    public void setSpecialty(String specialty) {
-        this.specialty = specialty;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public List<String> getAvailableTimes() {
-        return availableTimes;
-    }
-
-    public void setAvailableTimes(List<String> availableTimes) {
-        this.availableTimes = availableTimes;
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteDoctor(@PathVariable Long id) {
+        if (!doctorRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        doctorRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }
